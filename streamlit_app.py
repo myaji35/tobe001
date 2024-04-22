@@ -42,6 +42,18 @@ def Domestic_Foreign_sum(df):
     except Exception as e:
         st.error(f"내외국인수 필드를 추가하는 중 오류가 발생했습니다.: {str(e)}")
 
+def get_domestic_foreign_percentile(df):
+    max_value = df["내외국인수"].max()
+    min_value = df["내외국인수"].min()
+
+    # Define a function to calculate the '백분위' field
+    def calculate_percentile(row):
+        return 100 * (row - min_value) / (max_value - min_value) 
+
+    # Add the '백분위' field to the dataframe and calculate it
+    df["백분위"] = df["내외국인수"].apply(calculate_percentile)
+    return df
+
 # Create two columns for Streamlit sidebar and work area
 col1, col2 = st.columns([1, 3])
 
@@ -68,7 +80,7 @@ with col1:
         if uploaded_file is not None:
             df = load_data(uploaded_file)
             if df is not None:
-                df = Domestic_Foreign_sum(df)
+                df = get_domestic_foreign_percentile(df)  # Call the get_domestic_foreign_percentile function
                 st.session_state.df_domestic_foreign = df.copy()  # Use df.copy() to avoid SettingWithCopyWarning
         else:
             st.warning("파일을 업로드해주세요.")
@@ -77,24 +89,14 @@ with col1:
 with col2:
     col2_container = st.container()
     with col2_container:
-        #Apply CSS style to align col2 container to the left
-        st.markdown(
-            """
-            <style>
-            div[data-testid="column"]:nth-of-type(2) > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
-                align-items: flex-start;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+        
         if uploaded_file is not None:
             # Try loading data using the function
             try:
                 df = load_data(uploaded_file)
                 if df is not None:
                     # Check if data was loaded successfully
-                    tab1, tab2 = st.tabs(["Uploaded Data", "내외국인수"])
+                    tab1, tab2, tab3 = st.tabs(["Uploaded Data", "내외국인수","총세대수 백분위"])
                     
                     with tab1:
                         tab1_container = st.container()
@@ -127,6 +129,15 @@ with col2:
                                 st.dataframe(st.session_state.df_domestic_foreign)
                             else:
                                 st.info("내외국인수를 계산하려면 '1. 가상수치 : 내외국인수 = 내국인 + 외국인' 버튼을 누르세요.")
+                    with tab3:
+                        tab3_container = st.container()
+                        with tab3_container:
+                            if 'df_domestic_foreign' in st.session_state:
+                                st.subheader("총세대수 백분위")
+                                st.success("총세대수 백분위 필드가 추가되었습니다.")
+                                st.dataframe(st.session_state.df_domestic_foreign)
+                            else:
+                                st.info("총세대수 백분위를 계산하려면 '2. 총세대수 백분위' 버튼을 누르세요.")
             except Exception as e:
                 # Catch any unexpected errors
                 st.error(f"An unexpected error occurred: {e}")
